@@ -147,6 +147,6 @@ workflows:
               success: true               # To not receive a notification when a build succeeds
               failure: false              # To not receive a notification when a build fails
           app_store_connect:                 
-              apple_id: Your_Apple_ID@example.com # <-- Your Apple ID here
+              apple_id: Encrypted(...) # <-- Put you encrypted Apple ID here
               password: Encrypted(...) # <-- Put your encrypted App Specific Password here. For more information visit: https://support.apple.com/en-us/HT204397
     
