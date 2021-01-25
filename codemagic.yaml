@@ -1,20 +1,17 @@
 # Check out https://docs.codemagic.io/yaml/building-a-react-native-app/ for more information
-# Please review and update values in curly braces
+# Please review and update values
 
 workflows:
     react-native-android:
         name: React Native Android
         max_build_duration: 120
-        instance_type: mac_pro
+        instance_type: mac_mini
         environment:
             vars:
-                # https://firebase.google.com/docs/cli#cli-ci-systems
-                FIREBASE_TOKEN: Encrypted(...) # <-- Put your encrypted Firebase App Distribution CI token here
                 CM_KEYSTORE: Encrypted(...) # <-- Put your encrypted keystore file here
                 CM_KEYSTORE_PASSWORD: Encrypted(...) # <-- Put your encrypted keystore password here
                 CM_KEY_ALIAS_PASSWORD: Encrypted(...) # <-- Put your encrypted keystore alias password here
                 CM_KEY_ALIAS_USERNAME: Encrypted(...) # <-- Put your encrypted keystore alias username here
-            
             node: latest
         triggering:
             events:
@@ -46,46 +43,43 @@ workflows:
                 # build Android
                 cd android
                 ./gradlew assembleRelease
-            - name: Firebase App Distribution
-              script: |
-                # https://firebase.google.com/docs/app-distribution/android/distribute-cli
-                #!/usr/bin/env sh
-                set -e   # exit on first failed command
-                set -x   # print all executed commands to the log
-                
-                # Android Firebase App Distribution CLI
-                # Change the --app value below!!
-
-                firebase appdistribution:distribute $FCI_BUILD_DIR/android/app/build/outputs/apk/release/app-release.apk \
-                --app 1:831201993789:android:b9039e5b4d34d88754f271 \ 
-                --token "$FIREBASE_TOKEN" \
-                --release-notes "Internal Android test release" \
-                --groups "cmrnapp-testers"
         artifacts:
             - android/app/build/outputs/**/*.apk
         publishing:
+            # See the following link for details about email publishing - https://docs.codemagic.io/publishing-yaml/distribution/#email
             email:
                 recipients:
-                    - user@example.io
+                    - user_1@example.com
+                    - user_2@example.com
+                notify:
+                  success: true     # To not receive a notification when a build succeeds
+                  failure: false    # To not receive a notification when a build fails
+            slack: 
+              # See the following link about how to connect your Slack account - https://docs.codemagic.io/publishing-yaml/distribution/#slack
+              channel: '#channel-name'
+              notify_on_build_start: true   # To receive a notification when a build starts
+              notify:
+                success: true               # To not receive a notification when a build succeeds
+                failure: false              # To not receive a notification when a build fails
+            google_play:
+              # See the following link for information regarding publishing to Google Play - https://docs.codemagic.io/publishing-yaml/distribution/#google-play
+              credentials: Encrypted(...) # <-- Put your encrypted google-services.json here
+              track: internal
     react-native-ios:
         name: React Native iOS
         max_build_duration: 120
-        instance_type: mac_pro
+        instance_type: mac_mini
         environment:
             vars:
-                FIREBASE_TOKEN: Encrypted(...) # <-- Put your encrypted Firebase App Distribution CI token here
-                XCODE_WORKSPACE: "codemagicreactnative.xcworkspace" # <-- Put the name of your Xcode workspace here
-                XCODE_SCHEME: "codemagicreactnative" # <-- Put the name of your Xcode scheme here
-                # Manual Code Signing
-                # CM_CERTIFICATE: Encrypted(...) # <-- Put your encrypted certificate file here
-                # CM_CERTIFICATE_PASSWORD: Encrypted(...) # <-- Put your encrypted certificate password here
-                # CM_PROVISIONING_PROFILE: Encrypted(...) # <-- Put your encrypted provisioning profile here
-                #
-                # Automatic Code Signing 
-                # https://docs.codemagic.io/yaml/distribution/
+                # Env vars for automatic iOS code signing
+                # See the following link for more details - https://docs.codemagic.io/code-signing-yaml/signing-ios/
+                XCODE_WORKSPACE: "YOUR_WORKSPACE_NAME.xcworkspace" # <-- Put the name of your Xcode workspace here
+                XCODE_SCHEME: "YOUR_SCHEME_NAME" # <-- Put the name of your Xcode scheme here
+                
+
                 # https://appstoreconnect.apple.com/access/api
-                APP_STORE_CONNECT_ISSUER_ID: 5a451239-51eb-10b6-bfcc-60e61ddab13c # <-- Put your App Store Connect Issuer Id here
-                APP_STORE_CONNECT_KEY_IDENTIFIER: LY55E1G322 # <-- Put your App Store Connect Key Identifier here
+                APP_STORE_CONNECT_ISSUER_ID: Encrypted(...) # <-- Put your App Store Connect Issuer Id here
+                APP_STORE_CONNECT_KEY_IDENTIFIER: Encrypted(...) # <-- Put your App Store Connect Key Identifier here
                 APP_STORE_CONNECT_PRIVATE_KEY: Encrypted(...) # <-- Put your App Store Connect Private Key here
                 CERTIFICATE_PRIVATE_KEY: Encrypted(...) # <-- Put your Certificate Private key here
             node: latest
@@ -110,22 +104,11 @@ workflows:
             - name: Set up keychain to be used for codesigning using Codemagic CLI 'keychain' command
               script: |
                 keychain initialize
-            # - name: Set up Provisioning profiles from environment variables (Use with manual code signing)
-            #   script: |
-            #     PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-            #     mkdir -p "$PROFILES_HOME"
-            #     PROFILE_PATH="$(mktemp "$PROFILES_HOME"/$(uuidgen).mobileprovision)"
-            #     echo ${CM_PROVISIONING_PROFILE} | base64 --decode > $PROFILE_PATH
-            #     echo "Saved provisioning profile $PROFILE_PATH"
             - name: 
               script: |
                 # For information about Codemagic CLI commands visit: https://github.com/codemagic-ci-cd/cli-tools/blob/master/docs/app-store-connect/README.md
-                # app-store-connect fetch-signing-files $(xcode-project detect-bundle-id) --type IOS_APP_STORE --create
-                app-store-connect fetch-signing-files "com.codemagicreactnative" --type IOS_APP_ADHOC --create
-            # - name: Set up signing certificate (Use with manual code signing)
-            #   script: |
-            #     echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
-            #     keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
+                # For details about the --type paramater below - https://github.com/codemagic-ci-cd/cli-tools/blob/master/docs/app-store-connect/fetch-signing-files.md#--typeios_app_adhoc--ios_app_development--ios_app_inhouse--ios_app_store--mac_app_development--mac_app_direct--mac_app_store--mac_catalyst_app_development--mac_catalyst_app_direct--mac_catalyst_app_store--tvos_app_adhoc--tvos_app_development--tvos_app_inhouse--tvos_app_store
+                app-store-connect fetch-signing-files "YOUR_BUNDLE_ID_HERE" --type IOS_APP_ADHOC --create
             - name: Use system default keychain
               script: |
                 keychain add-certificates
@@ -141,29 +124,29 @@ workflows:
                 xcode-project use-profiles
             - name: Build ipa for distribution
               script: |
-                xcode-project build-ipa --workspace "$FCI_BUILD_DIR/ios/$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
-            - name: Firebase App Distribution
-              script: |
-                #!/usr/bin/env sh
-                set -e   # exit on first failed command
-                set -x   # print all executed commands to the log
-                
-                # iOS Firebase App Distribution CLI
-                # Change the --app value below!!
-
-                firebase appdistribution:distribute $FCI_BUILD_DIR/build/ios/ipa/codemagicreactnative.ipa \
-                --app 1:830101873788:ios:05df72817d62e45253f229 \
-                --token "$FIREBASE_TOKEN" \
-                --release-notes "Internal iOS test release" \
-                --groups "cmrnapp-testers"   
+                xcode-project build-ipa --workspace "$FCI_BUILD_DIR/ios/$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME" 
         artifacts:
             - build/ios/ipa/*.ipa
             - /tmp/xcodebuild_logs/*.log
             - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
             - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-
-        # publishing:
-        #   app_store_connect:                 
-        #       apple_id: yourAppleId@example.com  
-        #       password: Encrypted(...) # <-- Put your App Specific Password. For more information visit: https://support.apple.com/en-us/HT204397
+        publishing:
+          # See the following link for details about email publishing - https://docs.codemagic.io/publishing-yaml/distribution/#email
+          email:
+            recipients:
+              - user_1@example.com
+              - user_2@example.com
+            notify:
+              success: true     # To not receive a notification when a build succeeds
+              failure: false    # To not receive a notification when a build fails
+          slack: 
+            # See the following link about how to connect your Slack account - https://docs.codemagic.io/publishing-yaml/distribution/#slack
+            channel: '#channel-name'
+            notify_on_build_start: true   # To receive a notification when a build starts
+            notify:
+              success: true               # To not receive a notification when a build succeeds
+              failure: false              # To not receive a notification when a build fails
+          app_store_connect:                 
+              apple_id: Your_Apple_ID@example.com # <-- Your Apple ID here
+              password: Encrypted(...) # <-- Put your encrypted App Specific Password here. For more information visit: https://support.apple.com/en-us/HT204397
     
