@@ -42,7 +42,7 @@ https://docs.codemagic.io/getting-started/yaml/#triggering
 
 ## Getting help and support
 
-Free support is availble via our Slack Community. Click the following URL to join:
+Click the URL below to join the Codemagic Slack Community:
 
 https://slack.codemagic.io/
 
